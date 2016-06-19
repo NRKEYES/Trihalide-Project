@@ -1,0 +1,29 @@
+#!/bin/bash
+
+
+#PBS -l walltime=00:15:00
+
+#PBS -l nodes=1:ppn=4
+#PBS -N $InputName
+#PBS -l mem=2000mb
+
+
+cd  "$$PBS_O_WORKDIR"
+#cd ~/hemibonds-final/CCSDt/redo/linear structure/br/fixed/5
+
+source /etc/profile.d/modules.sh
+
+
+# Load Orca and included openmpi modules
+#module load orca/3.0.3/openmpi/1.6.5
+
+
+module load orca/3.0.3
+#module load openmpi/1.6.5/gcc/4.6.1
+
+
+
+orca $InputName > $OutputName
+# All done
+echo Finish: `date`
+------------------------

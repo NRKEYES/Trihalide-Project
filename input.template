@@ -1,0 +1,29 @@
+! $Level
+! $Basis
+! VerySlowConv
+! KDIIS
+
+
+%paras
+	R1 = $B1
+	R2 = $B2
+	A = $A1
+end
+
+%SCF
+	SOSCFStart 0.0003
+	maxiter 500
+end
+
+
+
+%coords
+	CTyp = internal
+	Charge = -1
+	Mult = 1
+	coords
+		F  0 0 0             0.0 0.0 0.0
+		Cl  1 0 0             {R1} 0.0 0.0
+		I  1 2 0             {R2} {A} 0.0
+		end
+end
