@@ -1,29 +1,71 @@
 #!/bin/bash
 
-
-#PBS -l walltime=00:15:00
-
+#PBS -l walltime=02:00:00
 #PBS -l nodes=1:ppn=4
 #PBS -N $JobName
-#PBS -l mem=2000mb
 
+cwd=$$PBS_O_WORKDIR
+files=( "$InputName" )
 
-cd  "$$PBS_O_WORKDIR"
-#cd ~/hemibonds-final/CCSDt/redo/linear structure/br/fixed/5
+export RSH_COMMAND="ssh"
 
 source /etc/profile.d/modules.sh
 
-
 # Load Orca and included openmpi modules
-#module load orca/3.0.3/openmpi/1.6.5
+module load orca
+
+# Get the full path to orca (helps with mpi problems)
+export ORCA_EXEC=$$(which orca)
+
+# Internal variables for creating scratch dir
+input=$${$InputName}
+NodeList=( $$(cat "$$PBS_NODEFILE" | sort | uniq -c) )
+ExecHost=$$(hostname -s)
+JobID=$$(echo -n "$$PBS_JOBID"|cut -d'.' -f1)
+SCRDIR="/tmp/orcajob/$$input"
+
+# Create scratch dir
+for (( i=0 ; i < $${#NodeList[@]} ; i++ ))
+do
+        ((i++))
+        if [[ $${NodeList[$$i]} == "$$ExecHost" ]] ; then
+                mkdir -p "$$SCRDIR"
+        else
+                ssh -x -n "$${NodeList[$$i]}" "mkdir -p $$SCRDIR"
+        fi
+done
+
+echo Starting job: "$$(date)"
+echo Job number: "$$(echo "$$JobID")"
+
+# Create .nodes file and copy to SCRDIR
+cp "$$PBS_NODEFILE" "$$cwd/$${input:0:$${#input}-4}.nodes"
+cp "$$cwd/$${input:0:$${#input}-4}.nodes" "$$SCRDIR"
+
+for file in "$${files[@]}"
+do
+	cp "$$cwd/$$file" "$$SCRDIR/"
+done
+
+# cd to scratch dir and start orca
+
+cd "$$SCRDIR"
+$$ORCA_EXEC "$InputName" > "$$cwd/$OutputName"
 
 
-module load orca/3.0.3
-#module load openmpi/1.6.5/gcc/4.6.1
+# orca finished, copy output to user dir
+cp "$$SCRDIR"/*.* "$$cwd"
 
+# remove scratch dir
+for (( i=0 ; i < $${#NodeList[@]} ; i++ ))
+do
+        ((i++))
+        if [[ $${NodeList[$$i]} == "$$ExecHost" ]] ; then
+                rm -rf "$$SCRDIR"
+        else
+                ssh -x -n "$${NodeList[$$i]}" "rm -rf $$SCRDIR"
+        fi
+done
 
-
-orca $InputName > $OutputName
 # All done
-echo Finish: `date`
-------------------------
+echo Finish: "$$(date)"
